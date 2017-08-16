@@ -1,7 +1,7 @@
 {
-	"name": "angular-npm-module-seed",
+	"name": "ionic-lightblue",
 	"version": "1.0.0",
-	"description": "Wot!",
+	"description": "Ionic support for LightBlue BLE",
 	"main": "bundles/npm-module-seed.umd.min.js",
 	"module": "index.js",
 	"typings": "index.d.ts",
@@ -11,7 +11,7 @@
 		"angular 2"
 	],
 	"author": {
-		"name": "",
+		"name": "Evalds Urtans",
 		"email": ""
 	},
 	"license": "",
@@ -19,7 +19,7 @@
 		"type": "git",
 		"url": ""
 	},
-	"homepage": "",
+	"homepage": "http://www.yellowrobot.xyz",
 	"bugs": {
 		"url": ""
 	},
