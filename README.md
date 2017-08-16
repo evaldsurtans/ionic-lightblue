@@ -29,6 +29,8 @@ view.ts
 
 import { LightBlueService } from 'ionic-lightblue';
 
+const LIGHTBLUE_NAME = 'BeanName';
+
 export class View {
 
 
