@@ -125,7 +125,7 @@ export class LightBlueService {
 
 					packet = this._outgoingPackets.shift();
 					let packetData = packet.pack();
-		
+
 					var arrayBuffer = packetData.buffer;
 					this.ble.write(this._deviceId, UUID_SERVICE_SERIAL_TRANSPORT, UUID_CHAR_SERIAL_TRANSPORT, arrayBuffer).then(value => {
 						observer.next(value);
