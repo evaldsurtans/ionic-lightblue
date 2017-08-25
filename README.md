@@ -30,6 +30,7 @@ view.ts
 import { LightBlueService } from 'ionic-lightblue';
 
 const LIGHTBLUE_NAME = 'BeanName';
+const OPTIONAL_END_SERIAL_RESPONSE_CHAR = "\n";
 
 export class View {
 
@@ -42,7 +43,8 @@ export class View {
     platform.ready().then(() => {
       console.log('platform ready');
 
-      this.lightblue.connect(LIGHTBLUE_NAME).subscribe(next => {
+      // OPTIONAL_END_SERIAL_RESPONSE_CHAR used when sendSerial isWaitResponse = true
+      this.lightblue.connect(LIGHTBLUE_NAME, OPTIONAL_END_SERIAL_RESPONSE_CHAR).subscribe(next => {
           console.log("connected");
 
           this.lightblue.readSerial().subscribe( next => {
@@ -60,7 +62,8 @@ export class View {
 
   onSend() {
     console.log("send");
-    this.lightblue.sendSerial("tester").subscribe(next => {
+    // Can wait or not wait response
+    this.lightblue.sendSerial("command", true).subscribe(next => {
       console.log(next);
     },
     error => {

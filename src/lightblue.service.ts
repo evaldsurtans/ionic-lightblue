@@ -25,9 +25,15 @@ export class LightBlueService {
 	_commandDefs = <any>{};
 	_deviceId = '';
 
+	_isWaitingResponse = false;
+	_endResponseSymbol = "\n";
+
 	_packetCount = 0
 	_outgoingPackets = <any>[]
 	_incomingPackets = <any>[];
+
+	_incommingObserver = <any>{};
+	_incomingString = '';
 
 	constructor(private http: Http, private ble: BLE)
 	{
@@ -44,7 +50,11 @@ export class LightBlueService {
 		throw new Error(`No definition for command ID: ${cmdId}`)
 	}
 
-	connect(name: string) : Observable<any> {
+	connect(name: string, endResponseSymbol:string = "\n") : Observable<any> {
+		this._endResponseSymbol = endResponseSymbol;
+		this._isWaitingResponse = false;
+		this._incomingString = '';
+
 		return new Observable<any>(observer => {
 			if (this.ble.isEnabled()) {
 				this.http.get('assets/command-definitions.yaml').subscribe(data => {
@@ -97,10 +107,23 @@ export class LightBlueService {
 		});
 	}
 
-	sendSerial(message:string) : Observable<any> {
+	sendSerial(message:string, isWaitResponse:boolean = false) : Observable<any> {
 		return new Observable<any>(observer => {
 			try {
-				let commandId = commands.commandIds.SERIAL_DATA
+				if(isWaitResponse) {
+					if (this._isWaitingResponse) {
+						observer.error("waiting response from previous send request");
+						observer.complete();
+						return;
+					}
+					this._isWaitingResponse = true;
+					this._incommingObserver = observer;
+				}
+				else {
+					this._isWaitingResponse = false;
+				}
+
+				let commandId = commands.commandIds.SERIAL_DATA;
 
 				// Pack the binary command
 				let defn = this._definitionForCommand(commandId);
@@ -128,8 +151,11 @@ export class LightBlueService {
 
 					var arrayBuffer = packetData.buffer;
 					this.ble.write(this._deviceId, UUID_SERVICE_SERIAL_TRANSPORT, UUID_CHAR_SERIAL_TRANSPORT, arrayBuffer).then(value => {
-						observer.next(value);
-						observer.complete();
+						//Message transmitted
+						if(!isWaitResponse) {
+							observer.next(value);
+							observer.complete();
+						}
 					}).catch(error => {
 						observer.error("ble.write: " + error.toString());
 						observer.complete();
@@ -140,6 +166,7 @@ export class LightBlueService {
 			}
 			catch(exc)
 			{
+				this._isWaitingResponse = false;
 				observer.error("sendSerial: " + exc.toString());
 				observer.complete();
 			}
@@ -163,7 +190,7 @@ export class LightBlueService {
 							}
 							this._incomingPackets = <any>[];
 
-							observer.next("packets received");
+							//observer.next("packets received");
 
 							let commandPayload = util.concatBuffers(packetPayloads);
 
@@ -174,7 +201,22 @@ export class LightBlueService {
 							if(incomingCommandDefn) {
 								let command = commands.Command.fromBuffer(commandPayload, incomingCommandDefn);
 								let args = command.asObject(command.getDefinition().arguments);
-								observer.next(args.data.toString());
+
+								let msgValue = args.data.toString();
+								if(this._isWaitingResponse)
+								{
+									this._incomingString += msgValue;
+									if(msgValue.endsWith(this._endResponseSymbol))
+									{
+										this._incommingObserver.next(this._incomingString);
+										this._incomingString = '';
+										this._isWaitingResponse = false;
+										this._incommingObserver.complete();
+									}
+								}
+								else {
+									observer.next(msgValue);
+								}
 							}
 
 						}
