@@ -1,6 +1,6 @@
 {
 	"name": "ionic-lightblue",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"description": "Ionic support for LightBlue BLE",
 	"main": "bundles/npm-module-seed.umd.min.js",
 	"module": "index.js",

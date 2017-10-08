@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { Http } from '@angular/http';
 import { BLE } from "@ionic-native/ble";
 import {Observable} from 'rxjs/Observable';
-import {observable} from "rxjs/symbol/observable";
 
 declare function require(name:string): any;
 declare const Buffer: any;
@@ -26,6 +25,7 @@ export class LightBlueService {
 	_deviceId = '';
 
 	_isWaitingResponse = false;
+	_timerWaitingResponse = 0;
 	_endResponseSymbol = "\n";
 
 	_packetCount = 0
@@ -107,7 +107,7 @@ export class LightBlueService {
 		});
 	}
 
-	sendSerial(message:string, isWaitResponse:boolean = false) : Observable<any> {
+	sendSerial(message:string, isWaitResponse:boolean = false, timeoutMilisec:number = 0) : Observable<any> {
 		return new Observable<any>(observer => {
 			try {
 				if(isWaitResponse) {
@@ -118,6 +118,14 @@ export class LightBlueService {
 					}
 					this._isWaitingResponse = true;
 					this._incommingObserver = observer;
+					if(timeoutMilisec != 0) {
+						this._timerWaitingResponse = setTimeout(() => {
+							this._isWaitingResponse = false;
+							this._incommingObserver.error("Timeout");
+							this._incomingString = '';
+							this._incommingObserver.complete();
+						}, timeoutMilisec);
+					}
 				}
 				else {
 					this._isWaitingResponse = false;
@@ -212,6 +220,10 @@ export class LightBlueService {
 										this._incomingString = '';
 										this._isWaitingResponse = false;
 										this._incommingObserver.complete();
+
+										if(this._timerWaitingResponse != 0) {
+											clearTimeout(this._timerWaitingResponse);
+										}
 									}
 								}
 								else {
