@@ -35,6 +35,8 @@ export class LightBlueService {
 	_incommingObserver = <any>{};
 	_incomingString = '';
 
+	_timeoutConnection = 0;
+
 	constructor(private http: Http, private ble: BLE)
 	{
 
@@ -50,10 +52,12 @@ export class LightBlueService {
 		throw new Error(`No definition for command ID: ${cmdId}`)
 	}
 
-	connect(name: string, endResponseSymbol:string = "\n") : Observable<any> {
+	connect(name: string, timeout:Number = 0, endResponseSymbol:string = "\n") : Observable<any> {
 		this._endResponseSymbol = endResponseSymbol;
 		this._isWaitingResponse = false;
 		this._incomingString = '';
+
+		//console.log('lbe: connect');
 
 		return new Observable<any>(observer => {
 			if (this.ble.isEnabled()) {
@@ -61,19 +65,39 @@ export class LightBlueService {
 					try {
 						this._commandDefs = yaml.safeLoad(data.text());
 
-						this.ble.startScanWithOptions([], {reportDuplicates: false}).subscribe((device: any) => {
+						if(timeout > 0) {
+							this._timeoutConnection = setTimeout(() => {
+								this.ble.stopScan().then(() => {
+									observer.error("Connection timeout reached");
+									observer.complete();
+								});
+							}, timeout);
+						}
 
+						//console.log('lbe: startScanWithOptions');
+						this.ble.startScanWithOptions([], {reportDuplicates: false}).subscribe((device: any) => {
 							//alert(device.name);
+							//console.log('lbe: device: ' + device.name);
 
 							if(device.name == name)
 							{
+								if(timeout > 0) {
+									clearTimeout(this._timeoutConnection);
+								}
 								this.ble.stopScan().then(() => {
 									this._deviceId = device.id;
-											this.ble.connect(this._deviceId).subscribe((peripheralData: any) => {
+									this.ble.isConnected(this._deviceId).then(() => {
+										//console.log('lbe: isConnected');
+										observer.complete();
+									}).catch(() => {
+										//console.log('lbe: connect');
+										this.ble.connect(this._deviceId).subscribe((peripheralData: any) => {
+											//console.log('lbe: connect true');
 											observer.next(peripheralData);
 											//observer.next(this._commandDefs);
 											observer.complete();
 										});
+									});
 								});
 							}
 						});
